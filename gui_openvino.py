@@ -5,7 +5,7 @@ import cv2
 import threading
 import time
 from tkinter import *
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from PIL import Image, ImageTk
 from ultralytics import YOLO
 
@@ -29,11 +29,16 @@ root.configure(bg="#202124")
 cap = None
 running = False
 frame_count = 0
+current_frame = None  # 🔥 store latest result
 
 # -------------------------------
 # Show Frame
 # -------------------------------
 def show_frame(frame):
+    global current_frame
+
+    current_frame = frame.copy()  # save for export
+
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(frame)
     img = img.resize((850, 520))
@@ -56,7 +61,6 @@ def process_image(frame):
     count_label.config(text=f"Weeds: {count}")
 
     show_frame(annotated)
-
     status_bar.config(text="Image Processed")
 
 # -------------------------------
@@ -92,7 +96,6 @@ def camera_loop():
 
         frame_count += 1
 
-        # Skip alternate frames
         if frame_count % 2 != 0:
             continue
 
@@ -140,6 +143,26 @@ def stop_camera():
     status_bar.config(text="Camera Stopped")
 
 # -------------------------------
+# SAVE IMAGE FUNCTION 🔥
+# -------------------------------
+def save_image():
+
+    if current_frame is None:
+        messagebox.showwarning("Warning", "No result to save!")
+        return
+
+    file_path = filedialog.asksaveasfilename(
+        defaultextension=".jpg",
+        filetypes=[("JPEG", "*.jpg"), ("PNG", "*.png")]
+    )
+
+    if not file_path:
+        return
+
+    cv2.imwrite(file_path, current_frame)
+    status_bar.config(text="Image Saved Successfully")
+
+# -------------------------------
 # UI Components
 # -------------------------------
 
@@ -182,6 +205,15 @@ stop_btn = Button(button_frame,
                   fg="white",
                   font=("Arial",12))
 stop_btn.grid(row=0,column=2,padx=10)
+
+save_btn = Button(button_frame,
+                  text="Save Result",
+                  command=save_image,
+                  width=15,
+                  bg="#FF9800",
+                  fg="white",
+                  font=("Arial",12))
+save_btn.grid(row=0,column=3,padx=10)
 
 # Confidence slider
 confidence_slider = Scale(root,
