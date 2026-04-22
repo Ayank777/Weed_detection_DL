@@ -2,6 +2,14 @@
 Weed detection YOLOv8 model with deep learning
 we have implemented YOLOv8 model on the weed detection system
 
+📊 Dataset
+Custom dataset for weed detection
+Annotated in YOLO format
+Includes training and validation images
+
+👉 ((https://www.kaggle.com/datasets/jaidalmotra/weed-detection))
+<!-- (The dataset is already present in the github repository given) -->
+
 Installation & Setup
 1️⃣ Clone the Repository
 https://github.com/Ayank777/Weed_detection_DL.git
