@@ -5,7 +5,7 @@ from ultralytics import YOLO
 # -------------------------------
 # Load trained YOLOv8 model
 # -------------------------------
-model = YOLO("runs/detect/train/weights/best.pt")
+model = YOLO("models/best.pt")
 
 # -------------------------------
 # Open webcam

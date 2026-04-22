@@ -1,6 +1,3 @@
-import os
-os.environ["OMP_NUM_THREADS"] = "4"
-
 import cv2
 import threading
 import time
@@ -10,58 +7,57 @@ from PIL import Image, ImageTk
 from ultralytics import YOLO
 
 # -------------------------------
-# Load OpenVINO Model
+# Load YOLO Model
 # -------------------------------
 try:
-    model = YOLO("best_openvino_model")
-    MODEL_STATUS = "OpenVINO Model Loaded"
+    model = YOLO("models/best.pt")
+    MODEL_STATUS = "Model Loaded Successfully"
 except:
     MODEL_STATUS = "Model Load Failed"
 
 # -------------------------------
-# GUI Setup
+# GUI Window
 # -------------------------------
 root = Tk()
-root.title("Weed Detection (OpenVINO Optimized)")
+root.title("Weed Detection System (YOLOv8)")
 root.geometry("1100x750")
 root.configure(bg="#202124")
 
+# Global variables
 cap = None
 running = False
-frame_count = 0
-current_frame = None  # 🔥 store latest result
+current_frame = None
 
 # -------------------------------
-# Show Frame
+# Process Frame
 # -------------------------------
-def show_frame(frame):
+def process_frame(frame):
     global current_frame
 
-    current_frame = frame.copy()  # save for export
+    conf = confidence_slider.get()
+
+    results = model(frame, conf=conf, verbose=False)
+    annotated = results[0].plot()
+
+    # Detection count
+    count = len(results[0].boxes)
+    detection_label.config(text=f"Weeds Detected: {count}")
+
+    current_frame = annotated
+    show_frame(annotated)
+
+# -------------------------------
+# Display Frame
+# -------------------------------
+def show_frame(frame):
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     img = Image.fromarray(frame)
     img = img.resize((850, 520))
     img_tk = ImageTk.PhotoImage(img)
 
-    video_label.imgtk = img_tk
-    video_label.configure(image=img_tk)
-
-# -------------------------------
-# Process Image (UPLOAD)
-# -------------------------------
-def process_image(frame):
-
-    conf = confidence_slider.get()
-
-    results = model(frame, imgsz=416, conf=conf, verbose=False)
-    annotated = results[0].plot()
-
-    count = len(results[0].boxes)
-    count_label.config(text=f"Weeds: {count}")
-
-    show_frame(annotated)
-    status_bar.config(text="Image Processed")
+    video_panel.imgtk = img_tk
+    video_panel.configure(image=img_tk)
 
 # -------------------------------
 # Upload Image
@@ -76,43 +72,9 @@ def upload_image():
         return
 
     frame = cv2.imread(file_path)
+    process_frame(frame)
 
-    if frame is None:
-        status_bar.config(text="Error loading image")
-        return
-
-    process_image(frame)
-
-# -------------------------------
-# Camera Loop
-# -------------------------------
-def camera_loop():
-    global frame_count
-
-    while running:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frame_count += 1
-
-        if frame_count % 2 != 0:
-            continue
-
-        start = time.time()
-
-        conf = confidence_slider.get()
-        results = model(frame, imgsz=416, conf=conf, verbose=False)
-
-        annotated = results[0].plot()
-
-        count = len(results[0].boxes)
-        count_label.config(text=f"Weeds: {count}")
-
-        fps = 1 / (time.time() - start)
-        fps_label.config(text=f"FPS: {int(fps)}")
-
-        show_frame(annotated)
+    status_bar.config(text="Image loaded and processed")
 
 # -------------------------------
 # Start Camera
@@ -121,12 +83,9 @@ def start_camera():
     global cap, running
 
     cap = cv2.VideoCapture(0)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-
     running = True
-    status_bar.config(text="Camera Running")
+
+    status_bar.config(text="Camera Started")
 
     threading.Thread(target=camera_loop, daemon=True).start()
 
@@ -143,7 +102,25 @@ def stop_camera():
     status_bar.config(text="Camera Stopped")
 
 # -------------------------------
-# SAVE IMAGE FUNCTION 🔥
+# Camera Loop
+# -------------------------------
+def camera_loop():
+
+    while running:
+        ret, frame = cap.read()
+
+        if not ret:
+            break
+
+        start = time.time()
+
+        process_frame(frame)
+
+        fps = 1/(time.time()-start)
+        fps_label.config(text=f"FPS: {fps:.2f}")
+
+# -------------------------------
+# Save Result
 # -------------------------------
 def save_image():
 
@@ -160,22 +137,24 @@ def save_image():
         return
 
     cv2.imwrite(file_path, current_frame)
-    status_bar.config(text="Image Saved Successfully")
+    status_bar.config(text="Result image saved")
 
 # -------------------------------
-# UI Components
+# UI COMPONENTS
 # -------------------------------
 
 title = Label(root,
-              text="Weed Detection System (OpenVINO)",
+              text="Weed Detection System using YOLOv8",
               font=("Arial", 22, "bold"),
               bg="#202124",
               fg="white")
 title.pack(pady=10)
 
-video_label = Label(root, bg="black")
-video_label.pack(pady=10)
+# Video display
+video_panel = Label(root, bg="black")
+video_panel.pack(pady=10)
 
+# Control buttons
 button_frame = Frame(root, bg="#202124")
 button_frame.pack(pady=10)
 
@@ -233,12 +212,12 @@ confidence_slider.pack(pady=10)
 info_frame = Frame(root, bg="#202124")
 info_frame.pack()
 
-count_label = Label(info_frame,
-                    text="Weeds: 0",
-                    font=("Arial",14),
-                    bg="#202124",
-                    fg="white")
-count_label.grid(row=0,column=0,padx=20)
+detection_label = Label(info_frame,
+                        text="Weeds Detected: 0",
+                        font=("Arial",14),
+                        bg="#202124",
+                        fg="white")
+detection_label.grid(row=0,column=0,padx=20)
 
 fps_label = Label(info_frame,
                   text="FPS: 0",

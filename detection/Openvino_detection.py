@@ -5,8 +5,7 @@ from ultralytics import YOLO
 import cv2
 import time
 
-model = YOLO("best_openvino_model")
-
+model = YOLO("models/best_openvino_model")
 cap = cv2.VideoCapture(0)
 cap.set(cv2.CAP_PROP_FRAME_WIDTH,640)
 cap.set(cv2.CAP_PROP_FRAME_HEIGHT,480)

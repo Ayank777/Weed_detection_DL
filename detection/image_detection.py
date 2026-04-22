@@ -16,7 +16,7 @@ if not image_path:
     exit()
 
 # Load YOLO model
-model = YOLO("runs/detect/train/weights/best.pt")
+model = YOLO("models/best.pt")
 
 # Read image
 frame = cv2.imread(image_path)
